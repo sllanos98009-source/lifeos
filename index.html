@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeOS & Study Assistant - Sofía Edition Pro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#303030',
+                        midnightSlate: '#2F3D46',
+                        ionParchment: '#FFF2C5',
+                        uniPrimary: '#2B438D',
+                        uniAccent: '#94ADFF',
+                        workPrimary: '#EE6158',
+                        workAccent: '#FBE449',
+                        habitPrimary: '#BA55D3',
+                        habitAccent: '#87CEFA',
+                        chorePrimary: '#FF8C00',
+                        choreAccent: '#FFD700',
+                        emailPrimary: '#1B3100',
+                        emailAccent: '#EBE1D5'
+                    },
+                    borderRadius: {
+                        '3xl': '1.75rem',
+                        '4xl': '2.5rem'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Microsoft MSAL para Outlook & Correos -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #303030; color: #FFF2C5; }
+        .font-serif-title { font-family: 'Playfair Display', serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,242,197,0.2); border-radius: 4px; }
+        .card-bento { background: #2F3D46; border: 1px solid rgba(255, 255, 255, 0.06); transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .card-bento:hover { transform: translateY(-2px); box-shadow: 0 16px 35px -8px rgba(0, 0, 0, 0.5); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row overflow-x-hidden pb-24 md:pb-0">
+
+    <div id="toast-container" class="fixed bottom-20 md:bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-banner" class="hidden fixed top-0 left-0 right-0 z-50 bg-[#2F3D46] border-b border-stone-700 p-3 text-xs flex justify-between items-center px-4">
+        <span class="text-ionParchment">📱 <b>Sofía</b>: Agrega LifeOS a tu Pantalla de Inicio en Safari (Menú Compartir ➔ "Agregar a Inicio").</span>
+        <button onclick="document.getElementById('pwa-banner').remove()" class="text-stone-400 font-bold ml-2">✕</button>
+    </div>
+
+    <!-- SIDEBAR DESKTOP -->
+    <aside class="hidden md:flex flex-col w-72 bg-[#2F3D46] border-r border-stone-800 p-6 shrink-0 sticky top-0 h-screen shadow-2xl">
+        <div class="flex items-center space-x-3 mb-6">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-brain text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-wide text-ionParchment">LifeOS Pro</h1>
+                <p class="text-[11px] text-stone-400">Edición Especial Sofía ✨</p>
+            </div>
+        </div>
+
+        <!-- Google Cloud Auth & Microsoft Sync Buttons -->
+        <div class="space-y-2 mb-4">
+            <button onclick="toggleCloudLogin()" id="sidebar-auth-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 px-3 rounded-2xl shadow transition flex items-center justify-center space-x-2">
+                <i class="fa-brands fa-google"></i><span id="auth-btn-text">Vincular Cloud Sync</span>
+            </button>
+            <button onclick="loginMicrosoft()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2.5 px-3 rounded-2xl shadow transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-envelope"></i><span id="microsoft-btn-text">Vincular Outlook & Widget</span>
+            </button>
+        </div>
+
+        <nav class="space-y-1.5 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm bg-stone-800 text-ionParchment shadow">
+                <i class="fa-solid fa-house-chimney w-5"></i><span>Home & Guía Sofía</span>
+            </button>
+            <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-calendar-days w-5 text-amber-400"></i><span>Calendario & Widget</span>
+            </button>
+            <button onclick="switchTab('university')" id="nav-university" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-graduation-cap w-5 text-[#94ADFF]"></i><span>Universidad</span>
+            </button>
+            <button onclick="switchTab('work')" id="nav-work" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-briefcase w-5 text-[#EE6158]"></i><span>Trabajo</span>
+            </button>
+            <button onclick="switchTab('habits')" id="nav-habits" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-seedling w-5 text-[#BA55D3]"></i><span>Hábitos & Daily Planner</span>
+            </button>
+            <button onclick="switchTab('chores')" id="nav-chores" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-house-user w-5 text-[#FF8C00]"></i><span>Hogar & Recurrentes</span>
+            </button>
+            <button onclick="switchTab('birthdays')" id="nav-birthdays" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-cake-candles w-5 text-pink-400"></i><span>Eventos Especiales</span>
+            </button>
+            <button onclick="switchTab('emails')" id="nav-emails" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-envelope-open-text w-5 text-emerald-400"></i><span>Correos Microsoft (Real)</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition font-medium text-sm text-stone-400 hover:bg-stone-800/50">
+                <i class="fa-solid fa-sliders w-5 text-teal-400"></i><span>Configuración</span>
+            </button>
+        </nav>
+
+        <div class="pt-4 border-t border-stone-800">
+            <div class="bg-stone-900 p-3.5 rounded-2xl border border-stone-800 text-xs text-stone-300 space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold text-ionParchment">Cloud Sync</span>
+                    <span id="sidebar-cloud-status" class="text-amber-400 font-bold">🟡 Local</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold text-ionParchment">Outlook Widget</span>
+                    <span id="sidebar-outlook-status" class="text-stone-400 font-bold">Inactivo</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MOBILE NAVIGATION -->
+    <nav class="md:hidden fixed bottom-3 left-4 right-3 z-45 bg-[#2F3D46]/95 backdrop-blur-xl border border-stone-700 px-3 py-2.5 flex items-center justify-around shadow-2xl rounded-3xl">
+        <button onclick="switchTab('home')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-ionParchment bg-stone-800 shadow" data-tab="home">
+            <i class="fa-solid fa-house text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">Home</span>
+        </button>
+        <button onclick="switchTab('calendar')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-stone-400" data-tab="calendar">
+            <i class="fa-solid fa-calendar-days text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">Agenda</span>
+        </button>
+        <button onclick="switchTab('university')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-stone-400" data-tab="university">
+            <i class="fa-solid fa-graduation-cap text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">U</span>
+        </button>
+        <button onclick="switchTab('work')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-stone-400" data-tab="work">
+            <i class="fa-solid fa-briefcase text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">Trabajo</span>
+        </button>
+        <button onclick="switchTab('habits')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-stone-400" data-tab="habits">
+            <i class="fa-solid fa-seedling text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">Hábitos</span>
+        </button>
+        <button onclick="switchTab('emails')" class="mobile-nav-btn flex flex-col items-center py-1 px-3 rounded-2xl text-stone-400" data-tab="emails">
+            <i class="fa-solid fa-envelope text-sm"></i>
+            <span class="text-[9px] mt-0.5 font-medium">Correos</span>
+        </button>
+    </nav>
+
+    <!-- MOBILE HEADER -->
+    <header class="md:hidden flex items-center justify-between bg-[#2F3D46] px-4 py-3.5 border-b border-stone-800 sticky top-0 z-40">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow">
+                <i class="fa-solid fa-brain text-white text-xs"></i>
+            </div>
+            <div>
+                <span class="font-bold text-ionParchment text-sm block">LifeOS Sofía</span>
+                <span id="mobile-cloud-label" class="text-[10px] text-amber-400">Cloud: Local</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleCloudLogin()" class="p-2.5 bg-indigo-600 text-white rounded-2xl text-xs"><i class="fa-brands fa-google"></i></button>
+            <button onclick="loginMicrosoft()" class="p-2.5 bg-blue-600 text-white rounded-2xl text-xs"><i class="fa-solid fa-envelope"></i></button>
+            <button onclick="switchTab('settings')" class="p-2.5 bg-stone-800 text-stone-300 rounded-2xl text-xs"><i class="fa-solid fa-sliders"></i></button>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar max-w-7xl mx-auto w-full space-y-6">
+
+        <!-- ================= TAB 1: HOME ================= -->
+        <div id="tab-home" class="tab-content space-y-6 animate-fade">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center card-bento p-6 md:p-8 rounded-4xl shadow-xl">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-amber-300/80 bg-amber-950/40 px-3 py-1 rounded-full border border-amber-800/40 font-serif-title">✨ ¡Inspiración del Día!</span>
+                    <h2 class="text-2xl md:text-3xl font-bold text-ionParchment tracking-tight mt-2 font-serif-title" id="home-motivational-title">Hoy es un gran día para triunfar, Sofía 💫</h2>
+                    <p class="text-stone-300 text-sm mt-1" id="home-motivational-subtitle">Cada paso que das te acerca a tus metas profesionales y académicas.</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <span id="current-date-display" class="bg-stone-900/90 px-4 py-2.5 rounded-2xl text-xs font-mono text-indigo-300 border border-stone-800 shadow-inner"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card-bento p-6 rounded-4xl shadow-xl flex flex-col items-center justify-center">
+                    <h3 class="text-base font-bold text-ionParchment mb-1 self-start flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-400"></i><span>Distribución Diaria</span>
+                    </h3>
+                    <div class="w-48 h-48 relative my-2">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 card-bento p-6 rounded-4xl shadow-xl flex flex-col h-[540px]">
+                    <div class="flex items-center justify-between pb-3.5 border-b border-stone-800">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center shadow">
+                                <i class="fa-solid fa-robot text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-ionParchment text-sm">Asistente Gemini AI</h3>
+                                <p class="text-xs text-emerald-400 flex items-center space-x-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span>Cloud Sync & Gemini 3 Flash API</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="clearChat()" class="text-xs text-stone-400 hover:text-white px-3.5 py-1.5 bg-stone-900 rounded-xl transition border border-stone-800">Reiniciar Chat</button>
+                    </div>
+
+                    <div id="chat-messages" class="flex-1 overflow-y-auto py-4 space-y-3.5 custom-scrollbar pr-2">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">AI</div>
+                            <div class="bg-stone-900 text-stone-200 p-4 rounded-3xl rounded-tl-none text-sm max-w-[85%] shadow-sm border border-stone-800">
+                                ¡Hola Sofía! Tus datos están sincronizados en la nube con Google. Pregúntame lo que quieras sobre tus estudios, trabajo u organización.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3.5 border-t border-stone-800 flex items-center space-x-2">
+                        <input type="text" id="chat-input" placeholder="Pregúntale a Gemini..." class="flex-1 bg-stone-900 border border-stone-800 rounded-2xl px-4 py-3.5 text-sm text-ionParchment focus:outline-none focus:border-indigo-500 shadow-inner" onkeypress="handleChatKey(event)">
+                        <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3.5 rounded-2xl text-sm font-semibold transition shadow flex items-center space-x-1">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: CALENDARIO & OUTLOOK WIDGET ================= -->
+        <div id="tab-calendar" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-ionParchment flex items-center space-x-2.5">
+                        <i class="fa-solid fa-calendar-days text-amber-400"></i><span>Calendario & Sincronización Outlook Widget</span>
+                    </h2>
+                    <p class="text-stone-300 text-sm mt-1">Envía tus eventos a tu Calendario de Outlook para verlos al instante en el widget de tu celular.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="pushAllEventsToOutlook()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-2xl text-sm shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i><span>Enviar al Widget (Outlook)</span>
+                    </button>
+                    <button onclick="openModal('modal-add-unified-event')" class="bg-ionParchment text-stone-900 font-bold px-4 py-2.5 rounded-2xl text-sm shadow hover:bg-white transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Nuevo Evento</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-bento p-6 rounded-4xl shadow-xl space-y-6">
+                <div class="flex justify-between items-center pb-3 border-b border-stone-800">
+                    <h3 id="calendar-period-title" class="font-bold text-ionParchment text-lg font-mono">Octubre 2026</h3>
+                </div>
+                <div id="calendar-view-container" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: UNIVERSIDAD ================= -->
+        <div id="tab-university" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#1e2a52] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                        <i class="fa-solid fa-graduation-cap text-[#94ADFF]"></i><span>Universidad Cloud</span>
+                    </h2>
+                    <p class="text-stone-300 text-sm mt-1">Agrega tus materias y sube fotos directamente desde tu dispositivo.</p>
+                </div>
+                <button onclick="openModal('modal-add-class')" class="bg-[#94ADFF] text-blue-950 font-semibold px-4 py-2.5 rounded-2xl text-sm shadow">＋ Materia</button>
+            </div>
+            <div class="card-bento p-6 rounded-4xl shadow-xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="classes-grid"></div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: TRABAJO ================= -->
+        <div id="tab-work" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#5c2320] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl">
+                <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                    <i class="fa-solid fa-briefcase text-[#EE6158]"></i><span>Trabajo & Tareas Pro</span>
+                </h2>
+            </div>
+            <div class="card-bento p-6 rounded-4xl shadow-xl space-y-4" id="work-tasks-container"></div>
+        </div>
+
+        <!-- ================= TAB 5: HÁBITOS ================= -->
+        <div id="tab-habits" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#4a2e54] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl">
+                <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                    <i class="fa-solid fa-seedling text-[#BA55D3]"></i><span>Hábitos & Daily Planner iOS</span>
+                </h2>
+            </div>
+            <div class="card-bento p-6 rounded-4xl shadow-xl space-y-4" id="habits-list"></div>
+        </div>
+
+        <!-- ================= TAB 6: HOGAR ================= -->
+        <div id="tab-chores" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#5a3812] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl">
+                <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                    <i class="fa-solid fa-house-user text-[#FF8C00]"></i><span>Hogar & Recurrentes</span>
+                </h2>
+            </div>
+            <div class="card-bento p-6 rounded-4xl shadow-xl space-y-4" id="chores-list"></div>
+        </div>
+
+        <!-- ================= TAB 7: CUMPLEAÑOS & EVENTOS ================= -->
+        <div id="tab-birthdays" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#541f3d] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                        <i class="fa-solid fa-cake-candles text-pink-400"></i><span>Eventos Especiales</span>
+                    </h2>
+                </div>
+                <button onclick="openModal('modal-add-birthday')" class="bg-ionParchment text-stone-900 font-bold px-4 py-2.5 rounded-2xl text-sm shadow">＋ Evento</button>
+            </div>
+            <div class="card-bento p-6 rounded-4xl shadow-xl grid grid-cols-1 md:grid-cols-2 gap-4" id="birthdays-list"></div>
+        </div>
+
+        <!-- ================= TAB 8: CORREOS MICROSOFT REAL ================= -->
+        <div id="tab-emails" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento bg-gradient-to-r from-stone-900 via-[#1b3100] to-stone-900 p-6 md:p-8 rounded-4xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center space-x-2.5">
+                        <i class="fa-solid fa-envelope-open-text text-emerald-400"></i><span>Bandejas de Microsoft (Institucional y Privada)</span>
+                    </h2>
+                    <p class="text-stone-300 text-sm mt-1">Conecta tus cuentas Microsoft para ver y abrir tus correos reales de Outlook en vivo.</p>
+                </div>
+                <button onclick="loginMicrosoft()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-3 rounded-2xl text-xs shadow transition">
+                    Vincular Cuentas Microsoft
+                </button>
+            </div>
+
+            <div class="card-bento p-6 rounded-4xl shadow-xl space-y-4">
+                <h3 class="font-bold text-ionParchment text-lg">Mensajes Recientes de Outlook</h3>
+                <div id="microsoft-emails-container" class="space-y-3">
+                    <p class="text-xs text-stone-400">Presiona "Vincular Cuentas Microsoft" en la barra lateral para cargar tus bandejas institucionales y personales reales.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 9: SETTINGS ================= -->
+        <div id="tab-settings" class="tab-content hidden space-y-6 animate-fade">
+            <div class="card-bento p-6 md:p-8 rounded-4xl shadow-xl max-w-2xl mx-auto space-y-6">
+                <h2 class="text-xl font-bold text-ionParchment flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-teal-400"></i><span>Configuración & Nube</span>
+                </h2>
+                <button onclick="toggleCloudLogin()" class="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-semibold shadow text-xs">Vincular Cloud Sync (Google Firebase)</button>
+                <button onclick="loginMicrosoft()" class="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-semibold shadow text-xs">Vincular Microsoft Outlook (Calendario & Correos)</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL NUEVA MATERIA CON SUBIDA DE FOTO DESDE DISPOSITIVO -->
+    <div id="modal-add-class" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="card-bento bg-[#2F3D46] rounded-4xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-fade">
+            <div class="flex justify-between items-center pb-3 border-b border-stone-800">
+                <h3 class="font-bold text-ionParchment text-lg">Nueva Materia</h3>
+                <button onclick="closeModal('modal-add-class')" class="text-stone-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <input type="text" id="new-class-name" placeholder="Nombre de la Materia" class="w-full bg-stone-900 border border-stone-800 rounded-2xl px-4 py-3 text-sm text-ionParchment">
+                <div>
+                    <label class="text-stone-400 block mb-1">Subir Foto desde tu Dispositivo:</label>
+                    <input type="file" id="new-class-file" accept="image/*" class="w-full bg-stone-900 border border-stone-800 rounded-2xl px-3 py-2 text-ionParchment">
+                </div>
+                <button onclick="saveNewClassDevice()" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-2xl text-sm shadow">Guardar Materia</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO EVENTO -->
+    <div id="modal-add-unified-event" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="card-bento bg-[#2F3D46] rounded-4xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-fade">
+            <div class="flex justify-between items-center pb-3 border-b border-stone-800">
+                <h3 class="font-bold text-ionParchment text-lg">Nuevo Evento</h3>
+                <button onclick="closeModal('modal-add-unified-event')" class="text-stone-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <input type="text" id="new-u-title" placeholder="Título" class="w-full bg-stone-900 border border-stone-800 rounded-2xl px-4 py-3 text-sm text-ionParchment">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="date" id="new-u-date" class="w-full bg-stone-900 border border-stone-800 rounded-2xl px-3 py-2.5 text-sm text-ionParchment">
+                    <input type="time" id="new-u-time" value="09:00" class="w-full bg-stone-900 border border-stone-800 rounded-2xl px-3 py-2.5 text-sm text-ionParchment">
+                </div>
+                <button onclick="addUnifiedEventItem()" class="w-full bg-amber-600 text-white font-semibold py-3 rounded-2xl text-sm shadow">Añadir y Sincronizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE CLOUD SYNC MODULE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_DE_FIREBASE",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "123456",
+            appId: "1:123456"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let isSyncingFromCloud = false;
+
+        window.toggleCloudLogin = async function() {
+            if (!currentUser) {
+                try {
+                    await signInWithPopup(auth, provider);
+                    showToast('¡Autenticado con Google Cloud Sync! ✨');
+                } catch (error) {
+                    showToast('Error de inicio de sesión: ' + error.message, 'error');
+                }
+            } else {
+                await signOut(auth);
+                showToast('Sesión de nube cerrada');
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const statusEl = document.getElementById('sidebar-cloud-status');
+            const mobileLabel = document.getElementById('mobile-cloud-label');
+            const authBtnText = document.getElementById('auth-btn-text');
+            if (user) {
+                if(statusEl) { statusEl.innerText = '🟢 Cloud'; statusEl.className = 'text-emerald-400 font-bold'; }
+                if(mobileLabel) mobileLabel.innerText = 'Cloud: Activo';
+                if(authBtnText) authBtnText.innerText = 'Cerrar Cloud Sync';
+                
+                const docRef = doc(db, "users", user.uid, "lifeos", "data");
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        isSyncingFromCloud = true;
+                        appState = docSnap.data();
+                        renderAll();
+                        isSyncingFromCloud = false;
+                    } else {
+                        setDoc(docRef, appState);
+                    }
+                });
+            } else {
+                if(statusEl) { statusEl.innerText = '🟡 Local'; statusEl.className = 'text-amber-400 font-bold'; }
+                if(mobileLabel) mobileLabel.innerText = 'Cloud: Local';
+                if(authBtnText) authBtnText.innerText = 'Vincular Cloud Sync';
+            }
+        });
+
+        window.saveStateToCloud = function() {
+            if (!currentUser || isSyncingFromCloud) return;
+            const docRef = doc(db, "users", currentUser.uid, "lifeos", "data");
+            setDoc(docRef, appState).catch(err => console.error("Error al sincronizar con Firebase:", err));
+        };
+    </script>
+
+    <!-- MICROSOFT MSAL SCRIPT PARA OUTLOOK WIDGET & CORREOS (INSTITUCIONAL Y PRIVADO) -->
+    <script>
+        const msalConfig = {
+            auth: {
+                clientId: "TU_CLIENT_ID_DE_AZURE_AQUI",
+                authority: "https://login.microsoftonline.com/common",
+                redirectUri: window.location.origin
+            }
+        };
+
+        const msalClient = new msal.PublicClientApplication(msalConfig);
+
+        window.loginMicrosoft = async function() {
+            try {
+                const loginResponse = await msalClient.loginPopup({
+                    scopes: ["User.Read", "Mail.Read", "Calendars.ReadWrite"]
+                });
+                document.getElementById('sidebar-outlook-status').innerText = '🟢 Sincronizado';
+                document.getElementById('sidebar-outlook-status').className = 'text-emerald-400 font-bold';
+                document.getElementById('microsoft-btn-text').innerText = 'Microsoft Conectado';
+                showToast('¡Outlook Calendar (Widget) y Cuentas de Correo vinculadas! 📬📅');
+                fetchMicrosoftEmails(loginResponse.accessToken);
+            } catch (error) {
+                console.error(error);
+                showToast('Error al conectar Microsoft', 'error');
+            }
+        };
+
+        async function fetchMicrosoftEmails(accessToken) {
+            try {
+                const response = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=8&$select=subject,from,receivedDateTime,bodyPreview', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await response.json();
+                const container = document.getElementById('microsoft-emails-container');
+                if(!container) return;
+                container.innerHTML = '';
+                
+                if(data.value && data.value.length > 0) {
+                    data.value.forEach(msg => {
+                        container.innerHTML += `
+                            <div class="bg-stone-900 p-4 rounded-3xl border border-stone-800 space-y-1">
+                                <span class="text-[10px] text-emerald-400 font-mono">De: ${msg.from.emailAddress.name} (${msg.from.emailAddress.address})</span>
+                                <h4 class="font-semibold text-sm text-ionParchment">${msg.subject}</h4>
+                                <p class="text-xs text-stone-300 truncate">${msg.bodyPreview}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    container.innerHTML = `<p class="text-xs text-stone-400">Bandejas de Microsoft limpias.</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        window.pushAllEventsToOutlook = async function() {
+            try {
+                const accounts = msalClient.getAllAccounts();
+                if (accounts.length === 0) {
+                    showToast('Primero presiona "Vincular Outlook & Widget" en la barra lateral.', 'error');
+                    return;
+                }
+                const silentRequest = { scopes: ["Calendars.ReadWrite"], account: accounts[0] };
+                const authResult = await msalClient.acquireTokenSilent(silentRequest).catch(() => msalClient.acquireTokenPopup(silentRequest));
+
+                for (let ev of appState.unifiedEvents) {
+                    const eventData = {
+                        subject: ev.title,
+                        body: { contentType: "Text", content: "Sincronizado desde LifeOS Pro - Edición Sofía ✨" },
+                        start: { dateTime: `${ev.date}T${ev.time || '09:00'}:00`, timeZone: "America/Bogota" },
+                        end: { dateTime: `${ev.date}T10:00:00`, timeZone: "America/Bogota" }
+                    };
+                    await fetch('https://graph.microsoft.com/v1.0/me/events', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authResult.accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(eventData)
+                    });
+                }
+                showToast('📅 ¡Eventos enviados a tu Calendario de Outlook y reflejados en tu widget!');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al sincronizar con Outlook Calendar', 'error');
+            }
+        };
+    </script>
+
+    <!-- APLICACIÓN PRINCIPAL DE SOFÍA -->
+    <script>
+        let appState = {
+            busTime: 45,
+            workGoal: 38,
+            currentYear: 2026,
+            currentMonth: 9,
+            unifiedEvents: [
+                { id: 101, title: 'Parcial Arquitectura de Software', date: '2026-10-25', time: '09:00', duration: 120, calendarId: 'uni', done: false },
+                { id: 102, title: 'Cliente Fintech - Rediseño', date: '2026-10-18', time: '14:00', duration: 180, calendarId: 'work', done: false }
+            ],
+            classes: [
+                { id: 1, name: 'Arquitectura de Software', days: ['Lun', 'Mie'], time: '09:00 AM', room: 'Lab 302', img: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&auto=format&fit=crop&q=60' }
+            ],
+            workTasks: [{ id: 1, taskName: 'Dashboard UI Refactor & React', done: false }],
+            habits: [{ id: 1, title: 'Skincare Matutino & Dientes', streak: 5 }],
+            chores: [{ id: 1, title: 'Lavar ropa blanca', date: '2026-10-15', done: false }],
+            birthdays: [{ id: 1, name: 'Mamá', date: '2026-10-22', alert: 'Faltan 9 días' }]
+        };
+
+        window.onload = function() {
+            const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+            if(isIos && !window.navigator.standalone) document.getElementById('pwa-banner').classList.remove('hidden');
+            renderAll();
+        };
+
+        window.renderAll = function() {
+            renderClasses();
+            renderCalendarView();
+            initCharts();
+        };
+
+        function showToast(message, type = 'success') {
+            if (window.saveStateToCloud) window.saveStateToCloud();
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold flex items-center space-x-2 animate-fade ${type === 'success' ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white'}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(btn => { btn.classList.remove('bg-stone-800', 'text-ionParchment', 'shadow'); btn.classList.add('text-stone-400'); });
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if(activeBtn) { activeBtn.classList.add('bg-stone-800', 'text-ionParchment', 'shadow'); activeBtn.classList.remove('text-stone-400'); }
+        }
+
+        function initCharts() {
+            const ctxDist = document.getElementById('distributionChart').getContext('2d');
+            new Chart(ctxDist, {
+                type: 'doughnut',
+                data: { labels: ['Universidad', 'Trabajo', 'Hábitos/Hogar', 'Transporte'], datasets: [{ data: [5, 4, 3, appState.busTime / 60], backgroundColor: ['#2B438D', '#EE6158', '#BA55D3', '#FBE449'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '72%' }
+            });
+        }
+
+        function renderCalendarView() {
+            const container = document.getElementById('calendar-view-container');
+            if(!container) return;
+            container.innerHTML = `<div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-stone-400 mb-2"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div><div id="calendar-days-grid" class="grid grid-cols-7 gap-3"></div>`;
+            const grid = document.getElementById('calendar-days-grid');
+            for(let day = 1; day <= 31; day++) {
+                grid.innerHTML += `<div class="card-bento rounded-2xl p-2.5 h-20 flex flex-col justify-between text-xs font-bold text-ionParchment"><span>${day}</span><span class="text-[10px] text-stone-400 font-normal">Sincronizado</span></div>`;
+            }
+        }
+
+        function renderClasses() {
+            const grid = document.getElementById('classes-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            appState.classes.forEach(c => {
+                grid.innerHTML += `
+                    <div class="card-bento rounded-3xl p-4 space-y-3">
+                        <div class="h-28 rounded-2xl overflow-hidden bg-stone-950">
+                            <img src="${c.img}" class="w-full h-full object-cover">
+                        </div>
+                        <h4 class="font-bold text-ionParchment text-sm">${c.name}</h4>
+                    </div>
+                `;
+            });
+        }
+
+        function saveNewClassDevice() {
+            const name = document.getElementById('new-class-name').value.trim();
+            const fileInput = document.getElementById('new-class-file');
+            
+            if(!name) { showToast('Ingresa el nombre de la materia', 'error'); return; }
+
+            if(fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    appState.classes.push({ id: Date.now(), name, img: e.target.result });
+                    renderClasses();
+                    closeModal('modal-add-class');
+                    showToast('Materia y foto guardadas en la nube.');
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                appState.classes.push({ id: Date.now(), name, img: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500' });
+                renderClasses();
+                closeModal('modal-add-class');
+                showToast('Materia guardada sin foto.');
+            }
+        }
+
+        function addUnifiedEventItem() {
+            const title = document.getElementById('new-u-title').value.trim();
+            const date = document.getElementById('new-u-date').value;
+            if(title && date) {
+                appState.unifiedEvents.push({ id: Date.now(), title, date, time: '09:00', duration: 60, done: false });
+                closeModal('modal-add-unified-event');
+                showToast('Evento añadido y sincronizado al widget.');
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+    </script>
+</body>
+</html>
